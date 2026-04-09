@@ -72,13 +72,6 @@ pip install -r requirements.txt
 3️⃣ Run the app
 streamlit run app.py
 
-
-🌐 Deployment
-
-This project is deployed using Streamlit Cloud.
-You can access the live app here:
-
-
 🧠 Future Improvements
 	•	🏏 Integration with live match data
 	•	📱 Mobile responsive UI
