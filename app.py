@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Page config
-st.set_page_config(page_title="IPL Predictor", layout="wide")
+st.set_page_config(page_title="IPL Win Predictor", layout="wide")
 
 # 🔥 BACKGROUND (NO FILE NEEDED)
 def set_bg():
@@ -46,7 +46,7 @@ set_bg()
 model = joblib.load('model.pkl')
 columns = joblib.load('columns.pkl')
 
-st.title("🏏 IPL Elite Win Predictor")
+st.title("🏏 IPL Win Predictor")
 
 teams = [
     'Mumbai Indians','Chennai Super Kings','Royal Challengers Bangalore',
