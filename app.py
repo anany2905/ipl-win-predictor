@@ -3,44 +3,42 @@ import joblib
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from textblob import TextBlob
 
 # Page config
 st.set_page_config(page_title="IPL Win Predictor", layout="wide")
 
-# 🔥 BACKGROUND (NO FILE NEEDED)
-def set_bg():
-    st.markdown("""
-    <style>
-    .stApp {
-        background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)),
-                    url("https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1950&q=80");
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-    }
+# 🔥 BACKGROUND
+st.markdown("""
+<style>
+.stApp {
+    background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)),
+                url("https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1950&q=80");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
 
-    .block-container {
-        background: rgba(0, 0, 0, 0.65);
-        padding: 20px;
-        border-radius: 15px;
-    }
+.block-container {
+    background: rgba(0, 0, 0, 0.65);
+    padding: 20px;
+    border-radius: 15px;
+}
 
-    h1, h2, h3, label {
-        color: white;
-    }
+h1, h2, h3, label {
+    color: white;
+}
 
-    .stButton>button {
-        background-color: #ff4b4b;
-        color: white;
-        border-radius: 10px;
-        height: 3em;
-        width: 100%;
-        font-size: 18px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-set_bg()
+.stButton>button {
+    background-color: #ff4b4b;
+    color: white;
+    border-radius: 10px;
+    height: 3em;
+    width: 100%;
+    font-size: 18px;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # Load model
 model = joblib.load('model.pkl')
@@ -48,6 +46,7 @@ columns = joblib.load('columns.pkl')
 
 st.title("🏏 IPL Win Predictor")
 
+# Teams & Cities
 teams = [
     'Mumbai Indians','Chennai Super Kings','Royal Challengers Bangalore',
     'Kolkata Knight Riders','Delhi Capitals','Rajasthan Royals',
@@ -73,6 +72,14 @@ with col2:
 
 city = st.selectbox("City", cities)
 
+# 🧠 NLP INPUT
+commentary = st.text_input("🧠 Live Commentary (NLP Feature)", "normal play")
+
+def get_sentiment(text):
+    return TextBlob(text).sentiment.polarity
+
+sentiment_score = get_sentiment(commentary)
+
 # 🔥 Calculations
 total_balls = overs_completed * 6 + balls_completed
 balls_remaining = 120 - total_balls
@@ -92,6 +99,13 @@ st.markdown(f"""
 - **CRR:** {round(run_rate,2)} | **RRR:** {round(rrr,2)}
 """)
 
+# 🧠 NLP DISPLAY
+st.markdown(f"""
+### 🧠 NLP Analysis
+- Commentary: *{commentary}*  
+- Sentiment Score: **{round(sentiment_score,2)}**
+""")
+
 # Prediction
 if st.button("🚀 Predict Winner"):
 
@@ -101,7 +115,8 @@ if st.button("🚀 Predict Winner"):
         'wickets_left':[wickets],
         'target':[target],
         'run_rate':[run_rate],
-        'rrr':[rrr]
+        'rrr':[rrr],
+        'sentiment_score':[sentiment_score]   # ✅ NLP FEATURE
     })
 
     for col in columns:
@@ -133,18 +148,27 @@ if st.button("🚀 Predict Winner"):
     overs_list = np.linspace(1, overs if overs > 1 else 1.5, 15)
     prob_list = []
 
+    # 🔥 simulate dynamic match progression
+    sim_score = score * 0.5
+
     for o in overs_list:
+
+        sim_score += np.random.uniform(4, 10)
+
         balls_rem = int(120 - (o * 6))
-        rr = score / o if o > 0 else 0
-        rrr_temp = (runs_left * 6) / balls_rem if balls_rem > 0 else 0
+        sim_runs_left = target - sim_score
+
+        rr = sim_score / o if o > 0 else 0
+        rrr_temp = (sim_runs_left * 6) / balls_rem if balls_rem > 0 else 0
 
         temp_df = pd.DataFrame({
-            'runs_left':[runs_left],
+            'runs_left':[sim_runs_left],
             'balls_remaining':[balls_rem],
             'wickets_left':[wickets],
             'target':[target],
             'run_rate':[rr],
-            'rrr':[rrr_temp]
+            'rrr':[rrr_temp],
+            'sentiment_score':[sentiment_score]  # keep NLP same
         })
 
         for col in columns:
@@ -163,7 +187,7 @@ if st.button("🚀 Predict Winner"):
     # 🎯 Turning Point
     turning_point = np.argmax(prob_list)
 
-    # 🎨 Graph
+    # 🎨 Graph (Centered & Clean)
     col_center = st.columns([1,2,1])
 
     with col_center[1]:
@@ -177,17 +201,16 @@ if st.button("🚀 Predict Winner"):
         ax.fill_between(overs_list, prob_array, where=(prob_array > 50), alpha=0.3)
         ax.fill_between(overs_list, prob_array, where=(prob_array <= 50), alpha=0.1)
 
-        # 🔥 Smart Label
+        # Turning point marker
         x = overs_list[turning_point]
         y = prob_list[turning_point]
 
-        offset = 15 if y < 50 else -20
-
         ax.scatter(x, y, s=80)
+
         ax.annotate("Turning Point",
                     (x, y),
                     textcoords="offset points",
-                    xytext=(0, offset),
+                    xytext=(0, 20),
                     ha='center',
                     fontsize=9,
                     bbox=dict(boxstyle="round,pad=0.3"))
